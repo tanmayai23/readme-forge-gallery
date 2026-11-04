@@ -398,6 +398,7 @@
   if ("IntersectionObserver" in window) {
     new IntersectionObserver(function (entries) {
       $("float-add").classList.toggle("hide", entries[0].isIntersecting);
+      $("float-bmc").classList.toggle("hide", entries[0].isIntersecting);
     }).observe($("footer"));
   }
 

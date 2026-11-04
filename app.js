@@ -75,26 +75,6 @@
     }
   }
 
-  // ---------- theme ----------
-  function pageTheme() {
-    var t = document.documentElement.dataset.theme;
-    if (t === "dark" || t === "light") return t;
-    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-  }
-
-  function syncThemeButton() {
-    var next = pageTheme() === "dark" ? "light" : "dark";
-    $("theme-toggle").setAttribute("aria-label", "Switch to " + next + " theme");
-  }
-
-  $("theme-toggle").addEventListener("click", function () {
-    var next = pageTheme() === "dark" ? "light" : "dark";
-    document.documentElement.dataset.theme = next;
-    try { localStorage.setItem("rf-theme", next); } catch (e) {}
-    syncThemeButton();
-    if (!state.previewChosen) setPreview(next, false);
-  });
-
   // ---------- preview theme ----------
   function setPreview(theme, chosen) {
     state.preview = theme;
@@ -152,6 +132,14 @@
       b.addEventListener("click", function () { selectCategory(c.id, true); });
       pills.appendChild(b);
     });
+    var drop = $("drop-gallery");
+    drop.textContent = "";
+    all.forEach(function (c) {
+      drop.appendChild(el("li", null, [el("a", { href: "#" + c.id }, [
+        el("span", { text: (c.emoji ? c.emoji + "  " : "") + (c.id === "all" ? "Everything" : c.name) }),
+        el("span", { class: "count", text: String(c.count) })
+      ])]));
+    });
   }
 
   function selectCategory(id, updateHash) {
@@ -160,7 +148,7 @@
       p.setAttribute("aria-pressed", String(p.getAttribute("data-cat") === id));
     });
     if (updateHash) {
-      var url = location.pathname + location.search + (id === "all" ? "#gallery" : "#" + id);
+      var url = location.pathname + location.search + "#" + id;
       history.replaceState(null, "", url);
     }
     render();
@@ -169,7 +157,7 @@
   function readHash(scroll) {
     if (!state.data) return;
     var h = decodeURIComponent(location.hash.slice(1));
-    var known = state.data.categories.some(function (c) { return c.id === h; });
+    var known = h === "all" || state.data.categories.some(function (c) { return c.id === h; });
     if (known) {
       selectCategory(h, false);
       if (scroll) $("gallery").scrollIntoView();
@@ -197,7 +185,7 @@
   function renderError() {
     grid.setAttribute("aria-busy", "false");
     grid.textContent = "";
-    var retry = el("button", { class: "btn primary", type: "button", text: "Retry" });
+    var retry = el("button", { class: "btn light", type: "button", text: "Retry" });
     retry.addEventListener("click", function () { load(0); });
     grid.appendChild(el("div", { class: "empty" }, [
       el("h3", { text: "Couldn't load the gallery" }),
@@ -221,7 +209,7 @@
       grid.appendChild(el("div", { class: "empty" }, [
         el("h3", { text: "Be the first." }),
         el("p", { text: "Made a README with readme-forge? Add it to the gallery." }),
-        el("div", { class: "hero-ctas" }, [el("a", { class: "btn primary", href: ADD_URL, text: "Add your README" })])
+        el("div", { class: "hero-ctas" }, [el("a", { class: "btn light", href: ADD_URL, text: "Add your README" })])
       ]));
       $("result-count").textContent = "No community READMEs yet.";
       return;
@@ -351,6 +339,42 @@
   $("detail-close").addEventListener("click", function () { dialog.close(); });
   dialog.addEventListener("click", function (e) { if (e.target === dialog) dialog.close(); });
 
+  // ---------- nav: dropdowns and the phone menu ----------
+  var navMenu = $("nav-menu"), burger = $("nav-burger");
+  function closeDrops(except) {
+    document.querySelectorAll(".has-drop > .nav-item").forEach(function (b) {
+      if (b === except) return;
+      b.setAttribute("aria-expanded", "false");
+      $(b.getAttribute("aria-controls")).classList.remove("open");
+    });
+  }
+  function closeMenu() {
+    closeDrops();
+    navMenu.classList.remove("open");
+    burger.setAttribute("aria-expanded", "false");
+    burger.setAttribute("aria-label", "Open menu");
+  }
+  document.querySelectorAll(".has-drop > .nav-item").forEach(function (b) {
+    b.addEventListener("click", function (e) {
+      e.stopPropagation();
+      var open = b.getAttribute("aria-expanded") !== "true";
+      closeDrops(b);
+      b.setAttribute("aria-expanded", String(open));
+      $(b.getAttribute("aria-controls")).classList.toggle("open", open);
+    });
+  });
+  burger.addEventListener("click", function (e) {
+    e.stopPropagation();
+    var open = !navMenu.classList.contains("open");
+    navMenu.classList.toggle("open", open);
+    burger.setAttribute("aria-expanded", String(open));
+    burger.setAttribute("aria-label", open ? "Close menu" : "Open menu");
+    if (!open) closeDrops();
+  });
+  navMenu.addEventListener("click", function (e) { if (e.target.closest("a")) closeMenu(); });
+  document.addEventListener("click", function (e) { if (!e.target.closest(".navpill")) closeMenu(); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeMenu(); });
+
   // ---------- static copy buttons ----------
   document.querySelectorAll("[data-copy-from]").forEach(function (b) {
     b.addEventListener("click", function () { copyText($(b.getAttribute("data-copy-from")).textContent, b); });
@@ -378,11 +402,6 @@
   }
 
   // ---------- start ----------
-  syncThemeButton();
-  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function () {
-    syncThemeButton();
-    if (!state.previewChosen) setPreview(pageTheme(), false);
-  });
-  setPreview(pageTheme(), false);
+  setPreview("dark", false);
   load(0);
 })();

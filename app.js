@@ -426,6 +426,16 @@
     })
     .catch(function () {});
 
+  // ---------- floating buttons: shown after the hero, hidden over the footer ----------
+  if ("IntersectionObserver" in window) {
+    var floaters = $("floaters"), pastHero = false, atFoot = false;
+    var syncFloat = function () { floaters.classList.toggle("show", pastHero && !atFoot); };
+    new IntersectionObserver(function (e) { pastHero = !e[0].isIntersecting; syncFloat(); }).observe(document.querySelector(".hero-install"));
+    new IntersectionObserver(function (e) { atFoot = e[0].isIntersecting; syncFloat(); }).observe($("footer"));
+  } else {
+    $("floaters").classList.add("show");
+  }
+
   // ---------- start ----------
   setPreview("dark", false);
   load(0);

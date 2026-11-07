@@ -394,11 +394,10 @@
     })
     .catch(function () {});
 
-  // ---------- floating button hides over the footer ----------
+  // ---------- floating Add your design button hides over the footer ----------
   if ("IntersectionObserver" in window) {
     new IntersectionObserver(function (entries) {
       $("float-add").classList.toggle("hide", entries[0].isIntersecting);
-      $("float-bmc").classList.toggle("hide", entries[0].isIntersecting);
     }).observe($("footer"));
   }
 

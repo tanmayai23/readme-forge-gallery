@@ -51,12 +51,15 @@
     function done() {
       var label = button.getAttribute("data-label") || button.textContent;
       button.setAttribute("data-label", label);
+      var span = button.querySelector("span");
       button.classList.add("done");
-      if (!button.querySelector("svg")) button.textContent = "Copied";
+      if (span) span.textContent = "Copied";
+      else if (!button.querySelector("svg")) button.textContent = "Copied";
       announce("Copied to clipboard");
       setTimeout(function () {
         button.classList.remove("done");
-        if (!button.querySelector("svg")) button.textContent = label;
+        if (span) span.textContent = "Copy";
+        else if (!button.querySelector("svg")) button.textContent = label;
       }, 1600);
     }
     function fallback() {
@@ -131,14 +134,6 @@
       ]);
       b.addEventListener("click", function () { selectCategory(c.id, true); });
       pills.appendChild(b);
-    });
-    var drop = $("drop-gallery");
-    drop.textContent = "";
-    all.forEach(function (c) {
-      drop.appendChild(el("li", null, [el("a", { href: "#" + c.id }, [
-        el("span", { text: (c.emoji ? c.emoji + "  " : "") + (c.id === "all" ? "Everything" : c.name) }),
-        el("span", { class: "count", text: String(c.count) })
-      ])]));
     });
   }
 
@@ -339,41 +334,78 @@
   $("detail-close").addEventListener("click", function () { dialog.close(); });
   dialog.addEventListener("click", function (e) { if (e.target === dialog) dialog.close(); });
 
-  // ---------- nav: dropdowns and the phone menu ----------
+  // ---------- nav: the phone menu ----------
   var navMenu = $("nav-menu"), burger = $("nav-burger");
-  function closeDrops(except) {
-    document.querySelectorAll(".has-drop > .nav-item").forEach(function (b) {
-      if (b === except) return;
-      b.setAttribute("aria-expanded", "false");
-      $(b.getAttribute("aria-controls")).classList.remove("open");
-    });
-  }
   function closeMenu() {
-    closeDrops();
     navMenu.classList.remove("open");
     burger.setAttribute("aria-expanded", "false");
     burger.setAttribute("aria-label", "Open menu");
   }
-  document.querySelectorAll(".has-drop > .nav-item").forEach(function (b) {
-    b.addEventListener("click", function (e) {
-      e.stopPropagation();
-      var open = b.getAttribute("aria-expanded") !== "true";
-      closeDrops(b);
-      b.setAttribute("aria-expanded", String(open));
-      $(b.getAttribute("aria-controls")).classList.toggle("open", open);
-    });
-  });
   burger.addEventListener("click", function (e) {
     e.stopPropagation();
     var open = !navMenu.classList.contains("open");
     navMenu.classList.toggle("open", open);
     burger.setAttribute("aria-expanded", String(open));
     burger.setAttribute("aria-label", open ? "Close menu" : "Open menu");
-    if (!open) closeDrops();
   });
   navMenu.addEventListener("click", function (e) { if (e.target.closest("a")) closeMenu(); });
-  document.addEventListener("click", function (e) { if (!e.target.closest(".navpill")) closeMenu(); });
+  document.addEventListener("click", function (e) { if (!e.target.closest(".nav")) closeMenu(); });
   document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeMenu(); });
+
+  // ---------- site theme: follows the OS until the visitor picks one ----------
+  var root = document.documentElement;
+  var darkQuery = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+  function siteTheme() {
+    var t = root.getAttribute("data-theme");
+    if (t === "light" || t === "dark") return t;
+    return darkQuery && darkQuery.matches ? "dark" : "light";
+  }
+  function syncTheme() {
+    var t = siteTheme();
+    var btn = $("theme-btn");
+    btn.setAttribute("aria-label", t === "dark" ? "Switch to light theme" : "Switch to dark theme");
+    var card = $("hero-card");
+    var src = card.getAttribute("data-" + t);
+    if (card.getAttribute("src") !== src) card.setAttribute("src", src);
+  }
+  $("theme-btn").addEventListener("click", function () {
+    var next = siteTheme() === "dark" ? "light" : "dark";
+    root.setAttribute("data-theme", next);
+    try { localStorage.setItem("rf-theme", next); } catch (e) {}
+    syncTheme();
+  });
+  if (darkQuery) {
+    var onScheme = function () { syncTheme(); };
+    if (darkQuery.addEventListener) darkQuery.addEventListener("change", onScheme);
+    else if (darkQuery.addListener) darkQuery.addListener(onScheme);
+  }
+  syncTheme();
+
+  // ---------- showcase tabs ----------
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tabs [role="tab"]'));
+  var captions = {
+    "tab-check": "Real output, unedited. An AI-written README checked against its repo: every ✗ is a claim the code doesn't back up.",
+    "tab-design": "The hero card on readme-forge's own README, made by its page kit. It switches with GitHub's light and dark themes."
+  };
+  function selectTab(tab, focus) {
+    tabs.forEach(function (t) {
+      var on = t === tab;
+      t.setAttribute("aria-selected", String(on));
+      t.tabIndex = on ? 0 : -1;
+      $(t.getAttribute("aria-controls")).hidden = !on;
+    });
+    $("showcase-cap").textContent = captions[tab.id];
+    if (focus) tab.focus();
+  }
+  tabs.forEach(function (t, i) {
+    t.addEventListener("click", function () { selectTab(t, false); });
+    t.addEventListener("keydown", function (e) {
+      var d = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
+      if (!d) return;
+      e.preventDefault();
+      selectTab(tabs[(i + d + tabs.length) % tabs.length], true);
+    });
+  });
 
   // ---------- static copy buttons ----------
   document.querySelectorAll("[data-copy-from]").forEach(function (b) {
@@ -393,14 +425,6 @@
       c.parentElement.setAttribute("aria-label", "Star readme-forge on GitHub, " + n + " stars");
     })
     .catch(function () {});
-
-  // ---------- floating button hides over the footer ----------
-  if ("IntersectionObserver" in window) {
-    new IntersectionObserver(function (entries) {
-      $("float-add").classList.toggle("hide", entries[0].isIntersecting);
-      $("float-bmc").classList.toggle("hide", entries[0].isIntersecting);
-    }).observe($("footer"));
-  }
 
   // ---------- start ----------
   setPreview("dark", false);

@@ -17,9 +17,10 @@ Static files with no build step and no dependencies:
 | File | What it does |
 |---|---|
 | `index.html` | The page |
-| `style.css` | The design: slate frame, photo hero, nav pill, gallery cards, responsive layout |
-| `app.js` | Loads `gallery.json` from the main repo and renders the gallery, filters, search and detail view |
-| `assets/hero.jpg` | The hero photo, a frame from the readme-forge demo video (`hero-960.jpg` for small screens) |
+| `style.css` | The design: light and dark themes from one set of tokens, sticky nav, product-window hero, gallery cards, responsive layout |
+| `app.js` | Loads `gallery.json` from the main repo and renders the gallery, filters, search and detail view; also the theme toggle and hero tabs |
+| `assets/icon.svg`, `favicon.ico` | The readme-forge mark, copied from `.github/assets/brand/` in the main repo |
+| `assets/readme-hero-*.svg` | The main repo's README hero card, shown in the hero's README.md tab |
 
 Vercel deploys the `main` branch as it is on every push. To preview it locally, serve the folder with any static server, for example `python -m http.server`, and open http://localhost:8000.
 
